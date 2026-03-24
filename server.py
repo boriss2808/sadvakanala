@@ -219,10 +219,9 @@ def send_impulse(is_closing=True):
         return result
     # Pokusaj 2: inching format "0000000001" za 1 sekundu
     t2 = str(int(time.time() * 1000))
-    # switch_inching format koji Tuya koristi za 2-kanalni modul
-    # Probamo standardni format: kanal + trajanje u hex
-    # switch_1 = "0000000001" (kanal 0, 1s), switch_2 = "0100000001" (kanal 1, 1s)
-    inching_val = "0000000001" if is_closing else "0100000001"
+    # switch_inching Base64 format: 3 bajta - [kanal, 0x01=enable, trajanje*0.1s]
+    # switch_1: 01 01 0A = AQEK, switch_2: 02 01 0A = AgEK
+    inching_val = "AQEK" if is_closing else "AgEK"
     body2 = json.dumps({"commands": [{"code": "switch_inching", "value": inching_val}]}, separators=(',',':'))
     sign2 = hmac_sha256(TUYA_ACCESS_SECRET, TUYA_ACCESS_ID + token + t2 + "\n".join(["POST", sha256_hex(body2), "", path]))
     headers["sign"] = sign2
