@@ -217,20 +217,31 @@ def send_impulse(is_closing=True):
     print(f"  Impuls na {channel} (True): {result}")
     if result.get("success"):
         return result
-    # Pokusaj 2: inching format "0000000001" za 1 sekundu
+    # Pokusaj 2: countdown_2 s vrijednošću 1 (aktivira switch na 1s)
     t2 = str(int(time.time() * 1000))
-    # switch_inching Base64 format: 3 bajta - [kanal, 0x01=enable, trajanje*0.1s]
-    # switch_1: 01 01 0A = AQEK, switch_2: 02 01 0A = AgEK
-    inching_val = "AQEK" if is_closing else "AgEK"
-    body2 = json.dumps({"commands": [{"code": "switch_inching", "value": inching_val}]}, separators=(',',':'))
+    countdown_code = "countdown_1" if is_closing else "countdown_2"
+    body2 = json.dumps({"commands": [{"code": countdown_code, "value": 1}]}, separators=(',',':'))
     sign2 = hmac_sha256(TUYA_ACCESS_SECRET, TUYA_ACCESS_ID + token + t2 + "\n".join(["POST", sha256_hex(body2), "", path]))
     headers["sign"] = sign2
     headers["t"] = t2
     req2 = urllib.request.Request(TUYA_BASE + path, data=body2.encode(), headers=headers, method="POST")
     with urllib.request.urlopen(req2, timeout=10) as resp2:
         result2 = json.loads(resp2.read())
-    print(f"  Impuls inching {channel}: {result2}")
-    return result2
+    print(f"  Impuls countdown {channel}: {result2}")
+    if result2.get("success"):
+        return result2
+    # Pokusaj 3: switch_inching Base64
+    t3 = str(int(time.time() * 1000))
+    inching_val = "AQEK" if is_closing else "AgEK"
+    body3 = json.dumps({"commands": [{"code": "switch_inching", "value": inching_val}]}, separators=(',',':'))
+    sign3 = hmac_sha256(TUYA_ACCESS_SECRET, TUYA_ACCESS_ID + token + t3 + "\n".join(["POST", sha256_hex(body3), "", path]))
+    headers["sign"] = sign3
+    headers["t"] = t3
+    req3 = urllib.request.Request(TUYA_BASE + path, data=body3.encode(), headers=headers, method="POST")
+    with urllib.request.urlopen(req3, timeout=10) as resp3:
+        result3 = json.loads(resp3.read())
+    print(f"  Impuls inching {channel}: {result3}")
+    return result3
 
 # ─── HTML stranice ────────────────────────────────────────────────────────────
 
