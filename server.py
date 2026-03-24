@@ -205,6 +205,7 @@ def send_impulse(is_closing=True):
     channel = "switch_1" if is_closing else "switch_2"
     token = get_token()
     t = str(int(time.time() * 1000))
+    # Pokusaj 1: direktni True
     body = json.dumps({"commands": [{"code": channel, "value": True}]}, separators=(',',':'))
     path = f"/v1.0/devices/{TUYA_DEVICE_ID}/commands"
     sign = hmac_sha256(TUYA_ACCESS_SECRET, TUYA_ACCESS_ID + token + t + "\n".join(["POST", sha256_hex(body), "", path]))
@@ -213,8 +214,23 @@ def send_impulse(is_closing=True):
     req = urllib.request.Request(TUYA_BASE + path, data=body.encode(), headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=10) as resp:
         result = json.loads(resp.read())
-    print(f"  Impuls na {channel}: {result}")
-    return result
+    print(f"  Impuls na {channel} (True): {result}")
+    if result.get("success"):
+        return result
+    # Pokusaj 2: inching format "0000000001" za 1 sekundu
+    t2 = str(int(time.time() * 1000))
+    # switch_inching format: "XXXXXXXXXD" gdje X=kanal(0=off,1=on), D=trajanje u 0.1s
+    # Za switch_1: pozicija 0, za switch_2: pozicija 1
+    inching_val = "1000000001" if is_closing else "0100000001"
+    body2 = json.dumps({"commands": [{"code": "switch_inching", "value": inching_val}]}, separators=(',',':'))
+    sign2 = hmac_sha256(TUYA_ACCESS_SECRET, TUYA_ACCESS_ID + token + t2 + "\n".join(["POST", sha256_hex(body2), "", path]))
+    headers["sign"] = sign2
+    headers["t"] = t2
+    req2 = urllib.request.Request(TUYA_BASE + path, data=body2.encode(), headers=headers, method="POST")
+    with urllib.request.urlopen(req2, timeout=10) as resp2:
+        result2 = json.loads(resp2.read())
+    print(f"  Impuls inching {channel}: {result2}")
+    return result2
 
 # ─── HTML stranice ────────────────────────────────────────────────────────────
 
